@@ -24,9 +24,14 @@
 #include <Adafruit_PN532.h> // NFC
 #include <SoftwareSerial.h> // ESP
 
-// Wiring for NFC:
-//Use 5V from Arduino
-Adafruit_PN532 nfc(2, 3, 4, 5); // SCK, MISO, MOSI, SS
+// NFC Wiring:
+//Use 5V
+#define SCK  (2)
+#define MOSI (3)
+#define SS   (4)
+#define MISO (5)
+Adafruit_PN532 nfc(SCK, MISO, MOSI, SS);
+
 
 // ESP:
 // Use 5V
@@ -34,12 +39,12 @@ Adafruit_PN532 nfc(2, 3, 4, 5); // SCK, MISO, MOSI, SS
 SoftwareSerial esp8266Module(10, 9); // RX, TX   // ESP
 /*
 // ESP Wiring:
-10  GND ----,
-3V  NULL | |,
-3V  NULL |--,
-5V  9   | |     // --> I thought 3V but 5 V seems to work better!
-           | 
-           |
+    10  GND ----,
+    3V  NULL | |,
+    3V  NULL |--,
+    5V  9   | |     // --> I thought 3V but 5 V seems to work better!
+               | 
+               |
 */
 //const String wifiNetwork = "jNet";
 //const String wifiPassword = "rullekake123";
@@ -65,8 +70,8 @@ int wifiLoopNum = 0;
 #endif
 */
 void setup(void) {
- // pinMode(8, OUTPUT); //ESP8266 RESET PIN
- // digitalWrite(8, HIGH);  //ESP8266 RESET PIN
+  pinMode(8, OUTPUT); //ESP8266 RESET PIN
+  digitalWrite(8, HIGH);  //ESP8266 RESET PIN
   
   Serial.begin(9600);
  
@@ -78,20 +83,20 @@ void setup(void) {
     while (1); // halt
   }
   // Got ok data, print it out!
- // Serial.print(F("Found chip PN5")); Serial.println((versiondata>>24) & 0xFF, HEX); 
- // Serial.print(F("Firmware ver. ")); Serial.print((versiondata>>16) & 0xFF, DEC); 
- // Serial.print('.'); Serial.println((versiondata>>8) & 0xFF, DEC);
+  Serial.print(F("Found chip PN5")); Serial.println((versiondata>>24) & 0xFF, HEX); 
+  Serial.print(F("Firmware ver. ")); Serial.print((versiondata>>16) & 0xFF, DEC); 
+  Serial.print('.'); Serial.println((versiondata>>8) & 0xFF, DEC);
   
   // configure board to read RFID tags
   nfc.SAMConfig();
   
   
-  //Serial.println("Setting up ESP...");
+  Serial.println("Setting up ESP...");
   esp8266Module.begin(9600);
   delay(5000);
 
   
-//  Serial.println(F("Waiting for an ISO14443A Card ..."));
+  Serial.println(F("Waiting for an ISO14443A Card ..."));
 }
 
 void loop(void) {
@@ -103,24 +108,24 @@ void loop(void) {
   // Wait for an ISO14443A type cards (Mifare, etc.).  When one is found
   // 'uid' will be populated with the UID, and uidLength will indicate
   // if the uid is 4 bytes (Mifare Classic) or 7 bytes (Mifare Ultralight)
-//  Serial.println(F("Waiting for something to read..."));
+  Serial.println(F("Waiting for something to read..."));
   success = nfc.readPassiveTargetID(PN532_MIFARE_ISO14443A, uid, &uidLength);
 
   if (success) {
     // Display some basic information about the card
- //   Serial.println(F("Found an ISO14443A card. UID Length: "));
-  //  Serial.print(uidLength, DEC);Serial.println(" bytes");
- //   Serial.print("  UID Value: ");
+    Serial.println(F("Found an ISO14443A card. UID Length: "));
+    Serial.print(uidLength, DEC);
+    Serial.println(" bytes. UID Value: ");
     nfc.PrintHex(uid, uidLength);
- //   Serial.println("");
+    Serial.println(F(""));
     
     if (uidLength == 4) {
       // We probably have a Mifare Classic card ... 
-   //   Serial.println("Seems to be a Mifare Classic card (4 byte UID)");
+      Serial.println(F("Seems to be a Mifare Classic card (4 byte UID)"));
 	  
       // Try to authenticate it for read/write access
       // Try with the factory default KeyA: 0xFF 0xFF 0xFF 0xFF 0xFF 0xFF
-  //    Serial.println("Trying to authenticate block 4 with default KEYA value");
+      Serial.println(F("Trying to authenticate block 4 with default KEYA value"));
       uint8_t keya[6] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
 	  
 	  // Start with block 4 (the first block of sector 1) since sector 0
@@ -129,7 +134,7 @@ void loop(void) {
       success = nfc.mifareclassic_AuthenticateBlock(uid, uidLength, 4, 0, keya);
 	  
       if (success) {
-  //      Serial.println("Sector 1 (Blocks 4..7) has been authenticated");
+        Serial.println(F("(Sector 1 (Blocks 4..7) has been authenticated"));
         uint8_t data[16];
 		
         // If you want to write something to block 4 to test with, uncomment
@@ -142,46 +147,47 @@ void loop(void) {
 		
         if (success) {
           // Data seems to have been read ... spit it out
-    //      Serial.println("Reading Block 4:");
+          Serial.println(F("Reading Block 4:"));
           nfc.PrintHexChar(data, 16);
-    //      Serial.println("");
+          Serial.println(F(""));
 		  
           // Wait a bit before reading the card again
           delay(1000);
         } else {
-     //     Serial.println("Ooops ... unable to read the requested block.  Try another key?");
+          Serial.println(F("Ooops ... unable to read the requested block.  Try another key?"));
         }
       } else {
-    //    Serial.println("Ooops ... authentication failed: Try another key?");
+        Serial.println(F("Ooops ... authentication failed: Try another key?"));
       }
     }
     if (uidLength == 7) {
       // We probably have a Mifare Ultralight card ...
-    //  Serial.println("Seems to be a Mifare Ultralight tag (7 byte UID)");
+      Serial.println(F("Seems to be a Mifare Ultralight tag (7 byte UID)"));
       // Try to read the first general-purpose user page (#4)
-  //    Serial.println("Reading page 4");
+      Serial.println(F("Reading page 4"));
       uint8_t data[32];
       success = nfc.mifareultralight_ReadPage (4, data);
       if (success) {
         // Data seems to have been read ... spit it out
         nfc.PrintHexChar(data, 4);
-//        Serial.println("");
+        Serial.println(F(""));
         // Wait a bit before reading the card again
         delay(1000);
       }
       else {
- //       Serial.println("Ooops ... unable to read the requested page!?");
+        Serial.println(F("Ooops ... unable to read the requested page!?"));
       }
     }
   } else {
-  //    Serial.println(String("Success 2 was: " + success));
+      Serial.println(String("Success 2 was: " + success));
   }
   
   // NFC end...
+  
+  
   delay(5000);
-  runEsp8266("www.davidjwatts.com", "/arduino/esp8266.php");
+  runEsp8266(F("www.davidjwatts.com"), F("/arduino/esp8266.php"));
 }
-
 
 void runEsp8266(String website, String page) {
   // 0 need to reset or beginning of loop
@@ -193,29 +199,29 @@ void runEsp8266(String website, String page) {
   // 6 close network connection
   switch (wifiStatus) {
     case 0:    // 0 need to reset or beginning of loop
-      Serial.println("TRYING esp8266Reset");
+      Serial.println(F("TRYING esp8266Reset"));
       esp8266Reset();
       break;
     case 1:    // 1 reset complete check wifi mode
-      Serial.println("TRYING changeWifiMode");
+      Serial.println(F("TRYING changeWifiMode"));
       changeWifiMode();
       break;
     case 2:    // 2 wifi mode is 3, now check network connection
-      Serial.println("TRYING checkWifiStatus");
+      Serial.println(F("TRYING checkWifiStatus"));
       checkWifiStatus();
       break;
     case 3:    // 3 If not connected connect to network
-      Serial.println("TRYING connectToWifi");
+      Serial.println(F("TRYING connectToWifi"));
       connectToWifi();
       //connectToWifi("networkIdetifier", "networkPassword");
       break;
     case 4:    // 4 request page from server
-      Serial.println("TRYING getPage");
+      Serial.println(F("TRYING getPage"));
       getPage(website, page);
       //getPage(website, page, "?num=", "3", "&num2=", "2000");
       break;
     case 5:    // 5 unlink from server after request
-      Serial.println("TRYING unlinkPage");
+      Serial.println(F("TRYING unlinkPage"));
       unlinkPage();
       break;
   }
@@ -241,24 +247,19 @@ bool changeWifiMode() {
   Serial.println("1");
   esp8266Module.println(F("AT+CWMODE?"));
   delay(5000);
-    Serial.println("2");
   if(esp8266Module.find("3"))   {
-      Serial.println("Found 3");
     wifiVal1 = F("Wifi Mode is 3");
     wifiStatus = 2;
     return true;
   } else {
-      Serial.println("Didnt find 3");
     esp8266Module.println(F("AT+CWMODE=3"));
     delay(5000);
     if (esp8266Module.find("no change") || esp8266Module.find("OK")) {
       wifiVal1 = F("Wifi Mode is 3");
-        Serial.println("Wifi mode is 3 yes");
       wifiStatus = 2;
       return true;
     } else {
       wifiVal1 = F("Wifi Mode failed");
-        Serial.println("Wifi mode failed");
       wifiStatus = 0;
       return false;
     }
@@ -270,16 +271,13 @@ bool checkWifiStatus() {
   esp8266Module.println("AT+CWJAP?");
 
   delay(5000);
-      Serial.println("Checking wifi status");
   if (esp8266Module.find(":")) {
-    Serial.println("WIFI NETWORK CONNECTED");
+    Serial.println(F("WIFI NETWORK CONNECTED"));
     wifiVal1 = F("WIFI:");
     wifiVal1 += esp8266Module.readStringUntil('\n');
-    Serial.println("Some more.. returning true ");
     wifiStatus = 4;
     return true;
   } else {
-        Serial.println("Wifi not connected ");
     wifiStatus = 3;
     return false;
   }
@@ -294,10 +292,7 @@ bool connectToWifi() {
   cmd += F("\"");
   esp8266Module.println(cmd);
   delay(5000);
-  if (esp8266Module.find("OK"))
-  {
-    Serial.println("CONNECTED TO WIFI");
-
+  if (esp8266Module.find("OK")) {
     wifiVal1 = F("CONNECTED TO WIFI");
     wifiStatus = 4;
     return true;
@@ -314,31 +309,30 @@ bool getPage(String website, String page) {
   cmd += F("\",80");
   esp8266Module.println(cmd);
   delay(5000);
-  if (esp8266Module.find("Linked"))
-  {
-    Serial.print("Connected to server");
+  if (esp8266Module.find("Linked")) {
+    Serial.print(F("Connected to server"));
   }
-  cmd =  "GET ";
+  cmd =  F("GET ");
   cmd += page;
-  cmd += "?num=";  //construct the http GET request
+  cmd += F("?num=");  //construct the http GET request
   cmd += wifiLight;
-  cmd += "&weather=";
+  cmd += F("&weather=");
   cmd += weatherCode;
-  cmd += " HTTP/1.0\r\n";
-  cmd += "Host:";
+  cmd += F(" HTTP/1.0\r\n");
+  cmd += F("Host:");
   cmd += website;
-  cmd += "\r\n\r\n";
+  cmd += F("\r\n\r\n");
   Serial.println(cmd);
-  esp8266Module.print("AT+CIPSEND=");
+  esp8266Module.print(F("AT+CIPSEND="));
   esp8266Module.println(cmd.length());
   Serial.println(cmd.length());
 
   if (esp8266Module.find(">")) {
-    Serial.println("found > prompt - issuing GET request");
+    Serial.println(F("found > prompt - issuing GET request"));
     esp8266Module.println(cmd);
   } else {
     wifiStatus = 5;
-    Serial.println("No '>' prompt received after AT+CPISEND");
+    Serial.println(F("No '>' prompt received after AT+CPISEND"));
     wifiVal1 = F("Failed request, retrying...");
     return false;
   }
@@ -349,11 +343,11 @@ bool getPage(String website, String page) {
 
   if (esp8266Module.find("*")) {
     String tempMsg = esp8266Module.readStringUntil('\n');
-    wifiVal2 = splitToValWifi(tempMsg, "@", "|");
-    wifiVal3 = splitToValWifi(tempMsg, "+", "@");
-    String piecetemp = splitToValWifi(tempMsg, "|", "$");
-    wifiVal5 = splitToValWifi(tempMsg, "$", "^");
-    wifiVal4 = splitToValWifi(tempMsg, "^", "~");
+    wifiVal2 = splitToValWifi(tempMsg, F("@"), F("|"));
+    wifiVal3 = splitToValWifi(tempMsg, F("+"), F("@"));
+    String piecetemp = splitToValWifi(tempMsg, F("|"), F("$"));
+    wifiVal5 = splitToValWifi(tempMsg, F("$"), F("^"));
+    wifiVal4 = splitToValWifi(tempMsg, F("^"), F("~"));
     int peice = piecetemp.toInt();
     Serial.println(wifiVal2);
     Serial.println(wifiVal3);
@@ -387,7 +381,7 @@ bool unlinkPage() {
 
 // SPLIT UP STRINGS - ESP method
 String splitToValWifi(String inputString, String delimiter, String endChar) {
-  String tempString = "";
+  String tempString = F("");
   int from;
   int to;
   for (int i = 0; i < inputString.length(); i++) {
