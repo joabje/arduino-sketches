@@ -31,6 +31,7 @@
 #define SS   (4)
 #define MISO (5)
 Adafruit_PN532 nfc(SCK, MISO, MOSI, SS);
+String uidString;
 
 
 // ESP:
@@ -46,10 +47,11 @@ SoftwareSerial esp8266Module(10, 9); // RX, TX   // ESP
                | 
                |
 */
-//const String wifiNetwork = "jNet";
-//const String wifiPassword = "rullekake123";
-const String wifiNetwork = "Get-ad89ee";
-const String wifiPassword = "243995637";
+//const String wifiNetwork = "";
+//const String wifiPassword = "";
+const String wifiNetwork = "";
+const String wifiPassword = "";
+const String herokuAuthkey = "";
 const String weatherCode = "3143244"; //BBC Weather code Oslo - 3143244
 String tempWifi;
 int wifiStatus = 1;
@@ -116,7 +118,8 @@ void loop(void) {
     Serial.println(F("Found an ISO14443A card. UID Length: "));
     Serial.print(uidLength, DEC);
     Serial.println(" bytes. UID Value: ");
-    nfc.PrintHex(uid, uidLength);
+  //  nfc.PrintHex(uid, uidLength);
+    Serial.println(getHexArrayAsString(uid, uidLength));
     Serial.println(F(""));
     
     if (uidLength == 4) {
@@ -149,6 +152,7 @@ void loop(void) {
           // Data seems to have been read ... spit it out
           Serial.println(F("Reading Block 4:"));
           nfc.PrintHexChar(data, 16);
+          Serial.println(getHexArrayAsString(data, 16));
           Serial.println(F(""));
 		  
           // Wait a bit before reading the card again
@@ -169,7 +173,8 @@ void loop(void) {
       success = nfc.mifareultralight_ReadPage (4, data);
       if (success) {
         // Data seems to have been read ... spit it out
-        nfc.PrintHexChar(data, 4);
+      //  nfc.PrintHexChar(data, 4);
+        Serial.println(getHexArrayAsString(data, 4));
         Serial.println(F(""));
         // Wait a bit before reading the card again
         delay(1000);
@@ -186,7 +191,23 @@ void loop(void) {
   
   
   delay(5000);
-  runEsp8266(F("www.davidjwatts.com"), F("/arduino/esp8266.php"));
+  runEsp8266(F("ciberlunsj.herokuapp.com"), F("/adddevice"));
+}
+
+String getHexArrayAsString(const byte * data, const uint32_t numBytes) {
+  uidString = ""; 
+  uint32_t szPos;
+  for (szPos=0; szPos < numBytes; szPos++) {
+    // Append leading 0 for small values
+    if (data[szPos] <= 0xF) {
+      uidString += F("0");
+    }
+    uidString += data[szPos];
+    /*if ((numBytes > 1) && (szPos != numBytes - 1)) {
+      Serial.print(" ");
+    }*/
+  }
+  return uidString;
 }
 
 void runEsp8266(String website, String page) {
@@ -305,6 +326,8 @@ bool connectToWifi() {
 // 4 - GET PAGE
 bool getPage(String website, String page) {
   String cmd = F("AT+CIPSTART=\"TCP\",\"");
+  String empNo = F("249");
+  String deviceId = F("F1337fcId");
   cmd += website;
   cmd += F("\",80");
   esp8266Module.println(cmd);
@@ -314,19 +337,21 @@ bool getPage(String website, String page) {
   }
   cmd =  F("GET ");
   cmd += page;
-  cmd += F("?num=");  //construct the http GET request
-  cmd += wifiLight;
-  cmd += F("&weather=");
-  cmd += weatherCode;
+  cmd += F("?authkey=");  //construct the http GET request
+  cmd += herokuAuthkey;
+  cmd += F("&empno=");
+  cmd += empNo;
+  cmd += F("&deviceid=");
+  cmd += deviceId;
   cmd += F(" HTTP/1.0\r\n");
-  cmd += F("Host:");
+  cmd += F("Host: ");
   cmd += website;
   cmd += F("\r\n\r\n");
   Serial.println(cmd);
   esp8266Module.print(F("AT+CIPSEND="));
   esp8266Module.println(cmd.length());
   Serial.println(cmd.length());
-
+  Serial.println("");
   if (esp8266Module.find(">")) {
     Serial.println(F("found > prompt - issuing GET request"));
     esp8266Module.println(cmd);
